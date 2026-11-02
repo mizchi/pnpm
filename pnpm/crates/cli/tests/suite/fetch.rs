@@ -8,6 +8,8 @@ use pnpm_testing_utils::{
 };
 use std::{fs, path::Path, process::Command};
 
+mod selection;
+
 fn pacquet_at(workspace: &Path) -> Command {
     Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
 }

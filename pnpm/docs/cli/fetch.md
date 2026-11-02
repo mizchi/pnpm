@@ -3,7 +3,7 @@ id: fetch
 title: pnpm fetch
 ---
 
-Fetch packages from a lockfile into virtual store, package manifest is ignored.
+Fetch packages from a lockfile into the virtual store. Dependency versions come from the lockfile.
 A missing package manifest is not created.
 
 `pnpm fetch` requires `pnpm-lock.yaml` and does not update it. When the project pins a pnpm version that commands would switch to, `pnpm fetch` also downloads that pnpm into the store, so a later `pnpm install --offline` finds it.
@@ -127,6 +127,24 @@ Local `file:` protocol dependencies are skipped during `pnpm fetch`, since they 
 :::
 
 ## Options
+
+### --filter &lt;selector\>, --filter-prod &lt;selector\>
+
+Fetch only the dependencies of the selected projects. Without a filter, `pnpm fetch` fetches dependencies for every project in the lockfile.
+
+Directory selectors work without project manifests, including for projects omitted by a sparse checkout or a Docker build. Name selectors read names from the available project manifests. Dependency versions and workspace dependency links still come from the lockfile.
+
+Fetch the dependencies of an application and its workspace dependencies:
+
+```sh
+pnpm --filter '{apps/web}...' fetch
+```
+
+Add `--workspace-root` when the root project's dependencies are needed too. `--filter-prod` follows only production workspace dependencies when expanding a selector. Add `--prod` to also exclude development packages from the fetch.
+
+Filtering reduces downloads, extraction, and virtual-store creation. To save a cache containing only those dependencies, use a separate `--store-dir`. Filtering does not remove other packages already in that store.
+
+See [Filtering](../filtering.md) for selector syntax.
 
 ### --dev, -D
 

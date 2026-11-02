@@ -1,6 +1,6 @@
 use super::{
-    Install, InstallRunOptions, InstallSaveOptions, ProjectMutation, WorkspaceInstallSelection,
-    errors::InstallError,
+    Install, InstallRunOptions, InstallSaveOptions, InstallSelection, ProjectMutation,
+    WorkspaceInstallSelection, errors::InstallError,
 };
 use crate::{LockfileVerificationOverride, RebuildOptions, ResolvedPackages};
 use pnpm_config::Config;
@@ -66,6 +66,28 @@ where
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions::default())).await
     }
 
+    /// Materialize selected lockfile importers without discovering workspace projects
+    /// or writing the workspace's wanted lockfile and state.
+    ///
+    /// # Panics
+    ///
+    /// Panics unless the install is frozen and ignores manifest freshness.
+    pub async fn run_for_importers<Reporter: self::Reporter + 'static>(
+        self,
+        importer_ids: &HashSet<String>,
+    ) -> Result<(), InstallError> {
+        assert!(
+            self.lockfile_policy.frozen && self.lockfile_policy.ignore_manifest_check,
+            "run_for_importers requires a frozen install without manifest freshness checks",
+        );
+        Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
+            selection: Some(InstallSelection::Lockfile(importer_ids)),
+            save: InstallSaveOptions { lockfile: false, workspace_state: false },
+            ..Default::default()
+        }))
+        .await
+    }
+
     /// Execute `pacquet prune`, enabling extraneous direct-dependency
     /// removal and optional workspace project selection.
     pub async fn run_prune<Reporter: self::Reporter + 'static>(
@@ -73,7 +95,7 @@ where
         selection: Option<WorkspaceInstallSelection<'_>>,
     ) -> Result<(), InstallError> {
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
-            selection,
+            selection: selection.map(InstallSelection::Workspace),
             manifests: crate::install::InstallManifestOptions {
                 prune_direct_dependencies: true,
                 ..Default::default()
@@ -93,7 +115,7 @@ where
     ) -> Result<(), InstallError> {
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
             lockfile_check: true,
-            selection,
+            selection: selection.map(InstallSelection::Workspace),
             ..Default::default()
         }))
         .await
@@ -145,7 +167,7 @@ where
         selection: WorkspaceInstallSelection<'_>,
     ) -> Result<(), InstallError> {
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
-            selection: Some(selection),
+            selection: Some(InstallSelection::Workspace(selection)),
             ..Default::default()
         }))
         .await
@@ -160,7 +182,7 @@ where
         read_package_hooked_manifest_paths: HashSet<PathBuf>,
     ) -> Result<(), InstallError> {
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
-            selection: Some(selection),
+            selection: Some(InstallSelection::Workspace(selection)),
             manifests: crate::install::InstallManifestOptions {
                 specifier_manifests: Some(lockfile_specifier_project_manifests),
                 hooked_paths: read_package_hooked_manifest_paths,
@@ -196,7 +218,7 @@ where
         bumps: &'a crate::ManifestSpecBumps,
     ) -> Result<(), InstallError> {
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
-            selection: Some(selection),
+            selection: Some(InstallSelection::Workspace(selection)),
             manifests: crate::install::InstallManifestOptions {
                 spec_bumps: Some(bumps),
                 ..Default::default()
@@ -213,7 +235,7 @@ where
     ) -> Result<(), InstallError> {
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
             lockfile_verification_override: Some(lockfile_verification_override),
-            selection: Some(selection),
+            selection: Some(InstallSelection::Workspace(selection)),
             ..Default::default()
         }))
         .await
@@ -239,7 +261,7 @@ where
         known_requires_build: Option<pnpm_deps_restorer::RequiresBuildBySnapshot>,
     ) -> Result<(), InstallError> {
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
-            selection: Some(selection),
+            selection: Some(InstallSelection::Workspace(selection)),
             manifests: crate::install::InstallManifestOptions {
                 known_requires_build,
                 ..Default::default()
@@ -305,7 +327,7 @@ where
             "run_selected_rebuild requires frozen_lockfile = true",
         );
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
-            selection: Some(selection),
+            selection: Some(InstallSelection::Workspace(selection)),
             ..rebuild_run_options(rebuild)
         }))
         .await

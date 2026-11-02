@@ -34,7 +34,7 @@ pub(super) async fn dispatch<'install, Reporter: self::Reporter + 'static>(
     root_preinstall_ran: bool,
 ) -> Result<Option<Dispatched<'install>>, InstallError> {
     let Settled { install, mode, lockfiles, .. } = settled;
-    run_pre_uninstall_hooks::<Reporter>(settled, options.selection.as_ref())?;
+    run_pre_uninstall_hooks::<Reporter>(settled, options.workspace_selection())?;
     // Dispatch priority, following the CLI + `preferFrozenLockfile`
     // semantics:
     //
@@ -188,7 +188,7 @@ pub(super) async fn prepare_dispatched_modules<'install, Reporter: self::Reporte
         installs_only: install.execution.installs_only,
     })
     .await?;
-    let script_options = (options.selection.as_ref(), options.rebuild.as_ref());
+    let script_options = (options.workspace_selection(), options.rebuild.as_ref());
     finish_prepared::<Reporter>(settled, script_options, decided, prepared).await
 }
 /// Announce the install and run `pnpm:devPreinstall`. Returns whether the
@@ -241,7 +241,7 @@ pub(super) fn announce_import<Reporter: self::Reporter>(
         scripts: crate::install::state_options::ProjectScriptSelection {
             mutation: install.execution.mutation,
             manifest_dir: workspace.dirs.manifest_dir,
-            workspace: options.selection.as_ref(),
+            workspace: options.workspace_selection(),
             rebuild: options.rebuild.as_ref(),
             include_dev: mode.included.dev_dependencies,
         },

@@ -152,7 +152,7 @@ fn workspace_packages_for_install(
         && install.context.config.link_workspace_packages.enabled_at_depth(0))
     .then(|| {
         let projects =
-            workspace_projects(loaded_workspace.projects.as_deref(), options.selection.as_ref());
+            workspace_projects(loaded_workspace.projects.as_deref(), options.workspace_selection());
         loaded_workspace
             .packages_of(projects)
             .or_else(|| build_workspace_packages_map(projects).map(std::sync::Arc::new))
@@ -167,8 +167,8 @@ pub(super) fn report_discovered_scope<Reporter: self::Reporter>(
     dirs: &WorkspaceDirs,
     loaded_workspace_projects: Option<&[pnpm_workspace::Project]>,
 ) {
-    let workspace_projects = options.selection
-        .as_ref()
+    let workspace_projects = options
+        .workspace_selection()
         .map_or_else(|| loaded_workspace_projects, |selection| Some(selection.all_projects));
     if options.selection.is_none() {
         emit_scope_log::<Reporter>(
@@ -212,20 +212,24 @@ impl<'w> InstallScope<'w> {
     ) -> Self {
         let project_manifests = install_project_manifests(&ProjectManifestScope {
             manifest: install.context.manifest,
-            selection: options.selection.as_ref(),
+            selection: options.workspace_selection(),
             workspace_root,
             workspace_projects,
             root_manifest_as_workspace_root: options.root_manifest_as_workspace_root,
             workspace_projects_are_overridden,
             config: install.context.config,
         });
-        let importers = ImporterSelection::select(
-            options.selection.as_ref(),
+        let mut importers = ImporterSelection::select(
+            options.workspace_selection(),
             !install.context.config.filter.is_empty()
                 || !install.context.config.filter_prod.is_empty(),
             workspace_root,
             &project_manifests,
         );
+        if let Some(super::super::InstallSelection::Lockfile(importer_ids)) = &options.selection {
+            importers.requested_importer_ids = Some((**importer_ids).clone());
+            importers.filtered_install = true;
+        }
         let prune_stale_importers = may_prune_stale_importers(&StaleImporterPrune {
             filtered_install: importers.requested_importer_ids.is_some(),
             mutation: install.execution.mutation,

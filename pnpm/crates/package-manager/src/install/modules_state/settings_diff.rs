@@ -44,7 +44,7 @@ fn check_modules_settings_diff(
     }
     // A `virtualStoreOnly` install (`pnpm fetch`) records empty hoist
     // patterns; the follow-up install completes the linking.
-    if modules.virtual_store_only != Some(true) {
+    if modules.virtual_store_only != Some(true) && !config.virtual_store_only {
         check_hoist_patterns_diff(modules, config)?;
     }
     check_compatibility(modules, config)

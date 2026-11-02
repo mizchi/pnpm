@@ -7,7 +7,12 @@ use super::{
     global, installed_project_config, render_permissions, resolve_bool_override,
     warn_about_config_root,
 };
-use crate::cli_args::reporter::{CliReporter, selected_reporter};
+use crate::cli_args::{
+    recursive::{
+        print_no_projects_matched, selected_lockfile_importer_ids, selectors_narrow_the_run,
+    },
+    reporter::{CliReporter, selected_reporter},
+};
 
 pub(in super::super) fn deploy<'a>(
     ctx: &RunCtx<'a>,
@@ -96,7 +101,23 @@ pub(in super::super) fn fetch<'a>(
     });
     Ok(Box::pin(async move {
         let command_state = command_state.await?;
-        args.run::<CliReporter>(command_state).await
+        let selected = if selectors_narrow_the_run(command_state.config)
+            && let Some(lockfile) = command_state.lockfile.get()?
+        {
+            let selected = selected_lockfile_importer_ids(
+                command_state.config,
+                (command_state.project_dir(), command_state.lockfile_dir()),
+                lockfile,
+            )?;
+            if selected.is_empty() {
+                print_no_projects_matched(command_state.config, command_state.project_dir());
+                return Ok(());
+            }
+            Some(selected)
+        } else {
+            None
+        };
+        args.run::<CliReporter>(command_state, selected).await
     }))
 }
 

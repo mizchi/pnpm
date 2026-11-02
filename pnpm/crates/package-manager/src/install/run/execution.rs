@@ -21,7 +21,7 @@ impl<'a> RunExecution<'a> {
         InstallScope::select(
             self.install,
             &self.workspace.dirs.workspace_root,
-            workspace_projects(self.loaded_workspace_projects, self.options.selection.as_ref()),
+            workspace_projects(self.loaded_workspace_projects, self.options.workspace_selection()),
             self.workspace.workspace_projects_are_overridden,
             &self.options,
         )
@@ -65,7 +65,7 @@ impl<'a> RunExecution<'a> {
             &self.mode,
             &self.workspace,
             &scope,
-            self.options.selection.as_ref(),
+            self.options.workspace_selection(),
             (&self.options.manifests.hooked_paths, self.loaded_workspace_projects),
         )
         .await?;
@@ -79,7 +79,7 @@ impl<'a> RunExecution<'a> {
             &scope,
             &loaded,
             &project_manifests,
-            self.options.selection.as_ref(),
+            self.options.workspace_selection(),
         )
         .await?;
         Box::pin(self.install_settled::<Reporter>(
@@ -248,7 +248,7 @@ impl<'a> RunExecution<'a> {
                     project_manifests,
                     workspace_projects(
                         self.loaded_workspace_projects,
-                        self.options.selection.as_ref(),
+                        self.options.workspace_selection(),
                     ),
                 ),
                 scope,
@@ -310,7 +310,9 @@ impl<'a> RunExecution<'a> {
         crate::install::state_options::PendingProjectScripts {
             mutation: self.install.execution.mutation,
             manifest_dir: self.workspace.dirs.manifest_dir,
-            selection: self.options.selection.take(),
+            selection: self.options.selection
+                .take()
+                .and_then(super::super::InstallSelection::into_workspace),
             rebuild: self.options.rebuild.take(),
             root_preinstall_ran,
         }

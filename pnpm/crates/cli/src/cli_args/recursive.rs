@@ -10,12 +10,14 @@
 pub use dependencies::{filtered_projects_dependencies, projects_to_verify, sequence_graph};
 pub use execution_args::RecursiveExecutionArgs;
 pub use importer_selection::{selected_workspace_importer_ids, selectors_narrow_the_run};
+pub use locked_projects::selected_lockfile_importer_ids;
 pub use summary::{ExecutionStatus, Status, count_failures, write_recursive_summary};
 pub use unmatched::UnmatchedFilters;
 
 mod dependencies;
 mod execution_args;
 mod importer_selection;
+mod locked_projects;
 mod unmatched;
 
 use crate::cli_args::catalogs::{configured_catalogs, workspace_catalogs};

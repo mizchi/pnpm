@@ -278,7 +278,7 @@ impl InstallView<'_> {
         };
         let snapshot = WorkspaceManifestRollbackGuard::snapshot(&workspace_dir);
         let selected_projects = workspace_projects_override.or_else(|| {
-            options.selection.as_ref().map(|s| s.all_projects)
+            options.workspace_selection().map(|s| s.all_projects)
         });
         // A frozen install cannot rewrite the lockfile, so it keeps the
         // entries the lockfile records even if no project on disk references them.

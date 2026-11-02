@@ -509,10 +509,24 @@ pub struct InstallProjects<DependencyGroupList> {
     pub dedicated: Option<DedicatedProjectInstall>,
 }
 
+enum InstallSelection<'selection> {
+    Workspace(WorkspaceInstallSelection<'selection>),
+    Lockfile(&'selection HashSet<String>),
+}
+
+impl<'selection> InstallSelection<'selection> {
+    fn into_workspace(self) -> Option<WorkspaceInstallSelection<'selection>> {
+        match self {
+            Self::Workspace(selection) => Some(selection),
+            Self::Lockfile(_) => None,
+        }
+    }
+}
+
 struct InstallRunOptions<'install, 'selection> {
     lockfile_verification_override: Option<LockfileVerificationOverride<'install>>,
     rebuild: Option<RebuildOptions>,
-    selection: Option<WorkspaceInstallSelection<'selection>>,
+    selection: Option<InstallSelection<'selection>>,
     root_manifest_as_workspace_root: bool,
     save: InstallSaveOptions,
     /// pnpm's `lockfileCheck`: the caller restores the lockfile and diffs
@@ -523,6 +537,15 @@ struct InstallRunOptions<'install, 'selection> {
     /// from the process environment, so tests can exercise both branches.
     prompt_eligibility_override: Option<bool>,
     manifests: InstallManifestOptions<'install>,
+}
+
+impl<'selection> InstallRunOptions<'_, 'selection> {
+    fn workspace_selection(&self) -> Option<&WorkspaceInstallSelection<'selection>> {
+        match &self.selection {
+            Some(InstallSelection::Workspace(selection)) => Some(selection),
+            Some(InstallSelection::Lockfile(_)) | None => None,
+        }
+    }
 }
 
 /// The workspace files the run may write besides the installed modules.

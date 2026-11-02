@@ -283,8 +283,7 @@ impl InstallPackageBySnapshot<'_> {
         fetch: &SnapshotFetch<'_>,
         variations: &VariationsResolution,
         allow_build: &(impl Fn(&str) -> Option<bool> + Send + Sync),
-    ) -> Result<(HashMap<String, PathBuf>, ExtractedPackageMetadata), InstallPackageBySnapshotError>
-    {
+    ) -> Result<(pnpm_fs::CasPaths, ExtractedPackageMetadata), InstallPackageBySnapshotError> {
         let selected = variant_for_host(
             variations,
             fetch.package_key,
